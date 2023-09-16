@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatSphere - Chat</title>
+    <style>
+        body {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="chat.css">
+    <script>
+        window.addEventListener('pageshow', function () {
+            axios.get('/auth/status', { withCredentials: true }) // `withCredentials` is important to include cookies in the request
+                .then(response => {
+                    if (response.data.isAuthenticated) {
+                        document.body.style.display = 'block';
+                        if (response.data.user.admin) {
+                            document.getElementById('user-management-btn').style.display = 'inline';
+                        }
+                    } else {
+                        window.location.href = '/user-login/login.html';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking auth status:', error);
+                    window.location.href = '/user-login/login.html'; // Redirect to login on error just to be safe
+                });
+        });
+
+        function logout() {
+            // Make an API call to the logout endpoint
+            axios.post('https://chatsphere.arthurxyl.com/auth/logout', {}, { withCredentials: true })
+                .then(response => {
+                    if (response.status === 200) {
+                        alert(response.data.message);
+                        window.location.href = '/user-login/login.html';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during logout:', error);
+                    alert('Error during logout.');
+                });
+        }
+    </script>
+    <script src="chat.js" defer></script>
+    <script src="rsc/axios.js"></script>
+</head>
+
+<body>
+
+    <div class="chat-container">
+        <aside class="icon-bar">
+            <button class="icon-button" onclick="showChatContacts()"><img src="path_to_chat_icon.png"
+                    alt="Chats"></button>
+            <button class="icon-button" onclick="showAllContacts()"><img src="path_to_contacts_icon.png"
+                    alt="Contacts"></button>
+            <!-- ... add more icons here ... -->
+            <button class="icon-button logout-button" onclick="logout()"><img src="path_to_logout_icon.png"
+                    alt="Logout"></button>
+
+        </aside>
+
+
+        <!-- Left side: Contacts list -->
+        <aside class="contacts">
+            <button>Add Contact</button>
+            <header>
+                <h2>Your Contacts</h2>
+            </header>
+
+            <ul class="contact-list">
+                <li class="contact" onclick="loadChat(this)">John Doe</li>
+                <li class="contact" onclick="loadChat(this)">Jane Smith</li>
+                <!-- ... add more contacts here ... -->
+            </ul>
+        </aside>
+
+        <!-- Right side: Chat history -->
+        <section class="chat">
+            <header>
+                <h2>John Doe</h2>
+            </header>
+
+            <div class="chat-history" id="chatHistory">
+                <!-- Example chat messages -->
+                <div class="message received">Hey! How are you?</div>
+                <div class="message sent">I'm good, thanks! How about you?</div>
+                <!-- ... add more messages dynamically here ... -->
+            </div>
+
+            <footer>
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button onclick="sendMessage()">Send</button>
+            </footer>
+
+        </section>
+
+    </div>
+
+</body>
+
+</html>

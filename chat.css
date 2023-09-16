@@ -1,0 +1,166 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+}
+
+.chat-container {
+    display: flex;
+    height: 100vh;
+}
+
+.contacts {
+    flex: 0.5;  /* this is half of the original width */
+    background-color: #333;
+    color: #fff;
+    overflow: auto;
+}
+
+.contacts header {
+    padding: 10px;
+}
+
+.contact-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.contact {
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.contact:hover {
+    background-color: #555;
+}
+
+.chat {
+    flex: 2.5;  /* adjust this to take up the rest of the space */
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat header {
+    padding: 20px;
+}
+
+/* .chat-history {
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+}
+
+.message {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.received {
+    align-self: flex-start;
+    background-color: #e9e9e9;
+}
+
+.sent {
+    align-self: flex-end;
+    background-color: #007BFF;
+    color: #fff;
+} */
+
+/* ... (rest of your CSS) ... */
+
+.chat-history {
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* This will right-align your messages by default */
+}
+
+.message {
+    max-width: 50%; /* Ensures the message doesn't take up more than half the container's width */
+    margin: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    word-wrap: break-word; /* Ensures long words don't overflow the box */
+}
+
+.received {
+    align-self: flex-start; /* Left-aligns the contact's messages */
+    background-color: #e9e9e9;
+}
+
+.sent {
+    align-self: flex-end; /* Right-aligns your messages */
+    background-color: #007BFF;
+    color: #fff;
+}
+
+
+footer {
+    padding: 10px;
+    display: flex;
+}
+
+footer input {
+    flex: 1;
+    padding: 10px;
+}
+
+footer button {
+    padding: 10px 15px;
+    margin-left: 10px;
+}
+
+.icon-bar {
+    width: 50px; /* or however wide you'd like it */
+    background-color: lightgrey;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.icon-button:hover {
+    background-color: #444;
+}
+
+.icon-button img {
+    width: 30px; /* Adjust based on your preference */
+    height: auto;
+}
+
+.logout-button {
+    margin-top: auto; /* This pushes the button to the bottom of the container */
+    background-color: #ff4b4b; /* Red color to indicate action significance */
+    color: #fff; /* White text/icon color for contrast */
+    padding: 8px; /* Adjust padding as needed */
+    border-radius: 4px;
+}
+
+.logout-button:hover {
+    background-color: #e43e3e; /* A bit darker red on hover */
+}
+
+
+/* Adjust the flex properties to cater for the new column */
+.contacts {
+    flex: 0.5;
+    /* ... rest of the styles ... */
+}
+
+.chat {
+    flex: 2;
+    /* ... rest of the styles ... */
+}
