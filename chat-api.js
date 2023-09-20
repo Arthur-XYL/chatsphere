@@ -4,20 +4,24 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 
-const auth = require("./routes/auth");
+const search = require('./routes/search')
+const auth = require('./routes/auth');
+const contacts = require('./routes/contacts');
+const friendRequests = require('./routes/friend-requests');
 
 const app = express();
-
-// Middleware
+app.use(express.json()); 
+app.use(cookieParser());
 app.use(cors({
     origin: 'https://chatsphere.arthurxyl.com',
     credentials: true
   }));
-  
-app.use(express.json()); // Parse JSON request payloads
-app.use(cookieParser());
 
-// Database connection
+app.use('/search', search);
+app.use('/auth', auth);
+app.use('/contacts', contacts);
+app.use('/friend-requests', friendRequests);
+
 const db = mysql.createPool({
   host: "127.0.0.1",
   user: process.env.MYSQL_USER,
@@ -25,13 +29,9 @@ const db = mysql.createPool({
   database: "chatsphere",
 });
 
-// To make db accessible to routes
-app.set("db", db); // you can then access db in your routes using req.app.get('db')
+app.set("db", db); 
 
-// Routers
-app.use("/auth", auth);
-
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3002;
 app
   .listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -12,42 +12,8 @@
     </style>
     <link rel="icon" href="rsc/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="chat.css">
-    <script>
-        window.addEventListener('pageshow', function () {
-            axios.get('/auth/status', { withCredentials: true }) // `withCredentials` is important to include cookies in the request
-                .then(response => {
-                    if (response.data.isAuthenticated) {
-                        document.body.style.display = 'block';
-                        if (response.data.user.admin) {
-                            document.getElementById('user-management-btn').style.display = 'inline';
-                        }
-                    } else {
-                        window.location.href = '/user-login/login.html';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking auth status:', error);
-                    window.location.href = '/user-login/login.html'; // Redirect to login on error just to be safe
-                });
-        });
-
-        function logout() {
-            // Make an API call to the logout endpoint
-            axios.post('https://chatsphere.arthurxyl.com/auth/logout', {}, { withCredentials: true })
-                .then(response => {
-                    if (response.status === 200) {
-                        alert(response.data.message);
-                        window.location.href = '/user-login/login.html';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error during logout:', error);
-                    alert('Error during logout.');
-                });
-        }
-    </script>
+    <script src="rsc/DOMPurify.js"></script>
     <script src="chat.js" defer></script>
-    <script src="rsc/axios.js"></script>
 </head>
 
 <body>
@@ -59,24 +25,49 @@
             <button class="icon-button" onclick="showAllContacts()"><img src="path_to_contacts_icon.png"
                     alt="Contacts"></button>
             <!-- ... add more icons here ... -->
-            <button class="icon-button logout-button" onclick="logout()"><img src="path_to_logout_icon.png"
+            <button class="icon-button logout-button" id="logout-btn"><img src="path_to_logout_icon.png"
                     alt="Logout"></button>
 
         </aside>
 
-
-        <!-- Left side: Contacts list -->
+        <!-- Left side: Contacts & Friend Requests List -->
         <aside class="contacts">
-            <button>Add Contact</button>
-            <header>
-                <h2>Your Contacts</h2>
-            </header>
+            <div class="controls">
+                <button id="add-contact-btn">Add Contact</button>
+                <button id="toggle-list-btn" data-showing="contacts">Friend Requests</button>
 
-            <ul class="contact-list">
-                <li class="contact" onclick="loadChat(this)">John Doe</li>
-                <li class="contact" onclick="loadChat(this)">Jane Smith</li>
-                <!-- ... add more contacts here ... -->
-            </ul>
+                <dialog id="addContactModal">
+                    <h3>Add Contact</h3>
+                    <input type="text" id="searchInput" placeholder="Search for user...">
+                    <button id="add-contact-modal-search">Search</button>
+                    <br /><br />
+                    <p id="searchResult">Enter a name to search...</p>
+                    <button id="add-contact-modal-cancel">Cancel</button>
+                    <button id="add-contact-modal-submit">Add</button>
+                </dialog>
+            </div>
+
+            <!-- Contacts List -->
+            <div id="contacts-list-div">
+                <header>
+                    <h2>Contacts</h2>
+                </header>
+
+                <ul class="contact-list">
+                    <!-- ... load contacts here ... -->
+                </ul>
+            </div>
+
+            <!-- Friend Requests List -->
+            <div id="friend-requests-div" style="display: none;">
+                <header>
+                    <h2>Friend Requests</h2>
+                </header>
+                
+                <ul class="friend-requests-list">
+                    <!-- This will be populated dynamically with incoming friend requests -->
+                </ul>
+            </div>
         </aside>
 
         <!-- Right side: Chat history -->
@@ -96,11 +87,8 @@
                 <input type="text" id="chatInput" placeholder="Type a message...">
                 <button onclick="sendMessage()">Send</button>
             </footer>
-
         </section>
-
     </div>
-
 </body>
 
 </html>

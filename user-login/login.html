@@ -31,6 +31,7 @@
             font-size: 1.1rem;
         }
     </style>
+    <script src="../rsc/DOMPurify.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', (event) => {
             document.querySelector('.login-form').addEventListener('submit', async (event) => {
@@ -38,10 +39,24 @@
 
                 let usernameField = document.querySelector('input[type="text"]');
                 let passwordField = document.querySelector('input[type="password"]');
+                let errorMessage = "";
 
+                if (!usernameField.value.trim()) {
+                    errorMessage += "Username cannot be empty. ";
+                }
+                if (!passwordField.value.trim()) {
+                    errorMessage += "Password cannot be empty. ";
+                }
+
+                if (errorMessage) {
+                    document.getElementById('error-text').textContent = errorMessage;
+                    return;
+                }
+
+                // Sanitize the input using DOMPurify
                 let data = {
-                    username: usernameField.value,
-                    password: passwordField.value
+                    username: DOMPurify.sanitize(usernameField.value),
+                    password: DOMPurify.sanitize(passwordField.value)
                 };
 
                 try {
@@ -55,8 +70,6 @@
 
                     const responseData = await response.json();
                     if (response.status === 200) {
-                        // If successful login, the JWT is now stored in HttpOnly cookies by the browser.
-                        // No need to explicitly store the JWT.
                         window.location.href = '/index.html';
                     } else if (responseData.error) {
                         document.getElementById('error-text').textContent = responseData.error;

@@ -13,7 +13,7 @@ router.get('/status', (req, res) => {
             } else {
                 return res.json({
                     isAuthenticated: true,
-                    user: decoded.user // this sends the user payload to the frontend
+                    user: decoded.user
                 });
             }
         });
@@ -24,15 +24,14 @@ router.get('/status', (req, res) => {
 
 router.post('/login', async (req, res) => {
     try {
-        const db = req.app.get('db');
         const { username, password } = req.body;
+        const db = req.app.get('db');
 
         // Check if user exists based on the username
         const [rows] = await db.query(
-            'SELECT id, password, admin FROM user WHERE username = ?', 
+            'SELECT id, password FROM users WHERE username = ?', 
             [username]
         );
-        
         const existingData = rows[0];
 
         if (existingData) {
@@ -40,8 +39,7 @@ router.post('/login', async (req, res) => {
             if (isMatch) {
                 const payload = {
                     user: {
-                        id: existingData.id,
-                        admin: existingData.admin
+                        id: existingData.id
                     }
                 };
         
@@ -51,8 +49,8 @@ router.post('/login', async (req, res) => {
                     // Setting JWT in HTTP-only cookie
                     res.cookie('jwt', token, {
                         httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
-                        maxAge: 86400 * 1000 // Set to expire in 24 hours (the value is in milliseconds)
+                        secure: process.env.NODE_ENV === 'production',
+                        maxAge: 86400 * 1000
                     });
         
                     res.status(200).json({ message: "User logged in successfully." });
@@ -70,15 +68,13 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
     try {
-        const db = req.app.get('db');
         const { username, password } = req.body;
-
+        const db = req.app.get('db');
         // Check for existing username
         const [rows] = await db.query(
-            'SELECT id FROM user WHERE username = ?', 
+            'SELECT id FROM users WHERE username = ?', 
             [username]
         );
-        
         const existingData = rows[0];
 
         if (existingData) {
@@ -88,12 +84,13 @@ router.post('/register', async (req, res) => {
             const hashedPassword = await bcrypt.hash(password, salt);
 
             await db.query(
-                'INSERT INTO user (username, password) VALUES (?, ?)', 
+                'INSERT INTO users (username, password) VALUES (?, ?)', 
                 [username, hashedPassword]
             );
 
             return res.status(201).send({ message: "User registered successfully." });
         }
+
     } catch (error) {
         return res.status(400).send({ message: "User registered failed." });
     }
@@ -102,7 +99,7 @@ router.post('/register', async (req, res) => {
 router.post('/logout', (req, res) => {
     res.cookie('jwt', '', {
         httpOnly: true,
-        expires: new Date(0), // Set to a past date, effectively expiring it
+        expires: new Date(0),
         secure: process.env.NODE_ENV === 'production'
     });
     res.status(200).json({ message: "User logged out successfully." });
