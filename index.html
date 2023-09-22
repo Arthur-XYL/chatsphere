@@ -11,26 +11,22 @@
         }
     </style>
     <link rel="icon" href="rsc/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="chat.css">
-    <script src="rsc/DOMPurify.js"></script>
-    <script src="chat.js" defer></script>
+    <link rel="stylesheet" href="./chat.css">
+    <script src="./rsc/DOMPurify.js"></script>
+    <script src="./rsc/socket.js"></script>
+    <script src="./chat.js" defer></script>
 </head>
 
 <body>
-
     <div class="chat-container">
         <aside class="icon-bar">
-            <button class="icon-button" onclick="showChatContacts()"><img src="path_to_chat_icon.png"
-                    alt="Chats"></button>
-            <button class="icon-button" onclick="showAllContacts()"><img src="path_to_contacts_icon.png"
-                    alt="Contacts"></button>
+            <button class="icon-button" onclick="showChatContacts()"><img src="path_to_chat_icon.png" alt="Chats"></button>
+            <button class="icon-button" onclick="showAllContacts()"><img src="path_to_contacts_icon.png" alt="Contacts"></button>
             <!-- ... add more icons here ... -->
-            <button class="icon-button logout-button" id="logout-btn"><img src="path_to_logout_icon.png"
-                    alt="Logout"></button>
-
+            <button class="icon-button logout-button" id="logout-btn"><img src="path_to_logout_icon.png" alt="Logout"></button>
         </aside>
 
-        <!-- Left side: Contacts & Friend Requests List -->
+        <!-- Left side: Combined List (Contacts & Friend Requests) -->
         <aside class="contacts">
             <div class="controls">
                 <button id="add-contact-btn">Add Contact</button>
@@ -47,25 +43,15 @@
                 </dialog>
             </div>
 
-            <!-- Contacts List -->
-            <div id="contacts-list-div">
+            <!-- Combined List -->
+            <div id="combined-list-div">
                 <header>
-                    <h2>Contacts</h2>
-                </header>
-
-                <ul class="contact-list">
-                    <!-- ... load contacts here ... -->
-                </ul>
-            </div>
-
-            <!-- Friend Requests List -->
-            <div id="friend-requests-div" style="display: none;">
-                <header>
-                    <h2>Friend Requests</h2>
+                    <!-- This will change between 'Contacts' and 'Friend Requests' depending on which list is shown -->
+                    <h2 id="list-title">Contacts</h2>
                 </header>
                 
-                <ul class="friend-requests-list">
-                    <!-- This will be populated dynamically with incoming friend requests -->
+                <ul class="combined-list">
+                    <!-- This will be populated dynamically with either contacts or incoming friend requests -->
                 </ul>
             </div>
         </aside>
@@ -76,7 +62,7 @@
                 <h2>John Doe</h2>
             </header>
 
-            <div class="chat-history" id="chatHistory">
+            <div class="chat-history" id="chat-history">
                 <!-- Example chat messages -->
                 <div class="message received">Hey! How are you?</div>
                 <div class="message sent">I'm good, thanks! How about you?</div>
@@ -85,7 +71,7 @@
 
             <footer>
                 <input type="text" id="chatInput" placeholder="Type a message...">
-                <button onclick="sendMessage()">Send</button>
+                <button id="send-message-btn">Send</button>
             </footer>
         </section>
     </div>

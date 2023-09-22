@@ -1,33 +1,67 @@
 const BASE_URL = 'https://chatsphere.arthurxyl.com/api';
+const socket = io('https://chatsphere.arthurxyl.com');
 
+socket.on('receive message', (data) => {
+    if (data.chat_id === chatId) { // Check if the received message belongs to the current chat
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const messageItem = document.createElement('div');
+        messageItem.textContent = data.content;
+        if (data.sender_id === userId) {
+            messageItem.classList.add('message', 'sent');
+        } else {
+            messageItem.classList.add('message', 'received');
+        }
+        chatHistoryDiv.appendChild(messageItem);
+    }
+});
 
 let userId;
+let chatId;
 
-window.addEventListener('pageshow', () => {
-    fetch(`${BASE_URL}/auth/status`, {
-        method: 'GET',
-        credentials: 'include', 
+window.addEventListener('pageshow', checkAuthentication);
+
+function fetchWithErrorHandler(url, method, body) {
+    const options = {
+        method: method,
+        credentials: 'include',
         headers: {
             'Content-Type': 'application/json'
         }
-    })
-        .then(response => response.json())
+    };
+    if (body) options.body = JSON.stringify(body);
+
+    return fetch(url, options)
+        .then(response => {
+            if (response.ok) return response.json();
+            throw new Error('Network response was not ok');
+        });
+}
+
+function checkAuthentication() {
+    fetchWithErrorHandler(`${BASE_URL}/auth/status`, 'GET')
         .then(data => {
             if (data.isAuthenticated) {
                 userId = data.user.id;
                 document.body.style.display = 'inline';
+                loadContacts();
             } else {
-                window.location.href = '/user-login/login.html';
+                redirectToLogin();
             }
         })
-        .catch(error => {
-            console.error('Error checking auth status:', error);
-            window.location.href = '/user-login/login.html';
+        .catch(() => {
+            redirectToLogin();
         });
-});
+}
+
+function redirectToLogin() {
+    window.location.href = '/user-login/login.html';
+}
 
 document.addEventListener("DOMContentLoaded", function() {
-    // Get necessary DOM elements
+    initializeApp();
+});
+
+function initializeApp() {
     const addContactBtn = document.getElementById("add-contact-btn");
     const logoutBtn = document.getElementById("logout-btn");
     const modal = document.getElementById("addContactModal");
@@ -35,305 +69,250 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchResult = modal.querySelector("#searchResult");
     const submitBtn = modal.querySelector('#add-contact-modal-submit');
     const cancelBtn = modal.querySelector('#add-contact-modal-cancel');
-    
+    const toggleListBtn = document.getElementById("toggle-list-btn");
+    const sendMessageBtn = document.getElementById("send-message-btn");
     let searchedUserId;
-    
-    // Event listener for the Add Contact button
-    addContactBtn.addEventListener("click", () => {
-        console.log("Add Contact Button Clicked!");
-        modal.showModal();
-    });
 
-    // Event listener for the search button inside the modal
-    searchBtn.addEventListener('click', () => {
+    addContactBtn.addEventListener("click", showModal);
+    searchBtn.addEventListener('click', searchUser);
+    submitBtn.addEventListener('click', submitFriendRequest);
+    cancelBtn.addEventListener('click', closeModal);
+    toggleListBtn.addEventListener("click", toggleList);
+    logoutBtn.addEventListener('click', logoutUser);
+    sendMessageBtn.addEventListener('click', sendMessage);
+
+    function showModal() {
+        modal.showModal();
+    }
+    
+    function closeModal() {
+        searchResult.innerHTML = '';
+        searchedUserId = null;
+        modal.close();
+    }
+    
+    function searchUser() {
         const userInput = document.getElementById("searchInput").value;
-        if (userInput === null || userInput === "") {
-            searchResult.innerHTML = `Input cannot be empty`;
+        if (!userInput) {
+            searchResult.innerHTML = 'Input cannot be empty';
             searchedUserId = null;
-        } else {
-            const sanitizedInput = DOMPurify.sanitize(userInput);
-            // Fetch user from the server/database
-            fetch(`${BASE_URL}/search/?username=${sanitizedInput}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
+            return;
+        }
+    
+        const sanitizedInput = DOMPurify.sanitize(userInput);
+        fetchWithErrorHandler(`${BASE_URL}/search/?username=${sanitizedInput}`, 'GET')
             .then(data => {
-                if(data.exists) {
+                if (data.exists) {
                     searchResult.innerHTML = `Username: ${data.username}`;
                     searchedUserId = data.userId;
-                    console.log(searchedUserId);
                 } else {
-                    searchResult.innerHTML = `User doesn't exist`;
+                    searchResult.innerHTML = 'User doesn\'t exist';
                     searchedUserId = null;
                 }
             })
             .catch(error => {
-                console.error('Error searching user:', error);
-                searchResult.innerHTML = `Error occurred during search`;
+                searchResult.innerHTML = error.message;
+                searchedUserId = null;
             });
-        }
-    });
-
-    // Event listener for the Submit button inside the modal
-    submitBtn.addEventListener('click', () => {
-        console.log("Submit Button Clicked!");
-        console.log(searchedUserId);
+    }
+    
+    function submitFriendRequest() {
         if (!searchedUserId) {
             searchResult.innerHTML = 'Please search a valid user before sending a request.';
             return;
         }
-
-        // Send a friend request
-        return fetch(`${BASE_URL}/friend-requests`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+    
+        fetchWithErrorHandler(`${BASE_URL}/friend-requests`, 'POST', {
                 userId: userId,
                 contactId: searchedUserId
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            searchResult.innerHTML = data.message;
-        })
-        .catch(error => {
-            console.error('Error sending friend request:', error);
-            searchResult.innerHTML = 'Error sending friend request. Please try again later.';
-        });
-    });
-
-
-    // Event listener for the Cancel button inside the modal
-    cancelBtn.addEventListener('click', () => {
-        console.log("Cancel Button Clicked!");
-        searchResult.innerHTML = '';
-        searchedUserId = null;
-        modal.close();
-        console.log("Closing modal after cancel");
-    });
-
-    document.getElementById("toggle-list-btn").addEventListener("click", () => {
-        const btn = document.getElementById('toggle-list-btn');
-        const showing = btn.getAttribute('data-showing');
-        
-        const contactsDiv = document.getElementById('contacts-list-div');
-        const requestsDiv = document.getElementById('friend-requests-div');
-        
-        if (showing === 'contacts') {
-            // Currently showing contacts, so now show friend requests.
-            contactsDiv.style.display = 'none';
-            requestsDiv.style.display = '';
-        
-            btn.setAttribute('data-showing', 'friend-requests');
-            btn.textContent = 'Contacts';
+            .then(data => {
+                searchResult.innerHTML = data.message;
+            })
+            .catch(() => {
+                searchResult.innerHTML = 'Error sending friend request. Please try again later.';
+            });
+    }
     
-            console.log("loading friend request");
-            // Call the function to load and display the friend requests.
+    function toggleList() {
+        const combinedListDiv = document.getElementById('combined-list-div');
+        const listTitle = document.getElementById('list-title');
+    
+        if (toggleListBtn.getAttribute('data-showing') === 'contacts') {
+            listTitle.textContent = 'Friend Requests';
+            toggleListBtn.setAttribute('data-showing', 'friend-requests');
+            toggleListBtn.textContent = 'Contacts';
             loadFriendRequests();
         } else {
-            // Currently showing friend requests, so now show contacts.
-            contactsDiv.style.display = '';
-            requestsDiv.style.display = 'none';
-        
-            btn.setAttribute('data-showing', 'contacts');
-            btn.textContent = 'Friend Requests';
+            listTitle.textContent = 'Contacts';
+            toggleListBtn.setAttribute('data-showing', 'contacts');
+            toggleListBtn.textContent = 'Friend Requests';
             loadContacts();
         }
-    });
-    
-    function loadFriendRequests() {
-        const requestsDiv = document.getElementById('friend-requests-div');
-    
-        // Clear previous friend requests if any
-        requestsDiv.innerHTML = '';
-    
-        fetch(`${BASE_URL}/friend-requests/${userId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            const requestsContainer = document.getElementById('friend-requests-div');
-            requestsContainer.innerHTML = ''; // Clear existing requests
-
-            if (data && data.length > 0) {
-                data.forEach(request => {
-                    const requestDiv = document.createElement('div');
-                    requestDiv.className = 'request-item';
-
-                    if (currentUserId === request.sender_id) {
-                        // Current user is the sender
-                        const receiverInfo = document.createElement('span');
-                        receiverInfo.textContent = `Request to ${request.receiver_username} is ${request.status}`;
-                        requestDiv.appendChild(receiverInfo);
-                    } else {
-                        const usernameSpan = document.createElement('span');
-                        usernameSpan.textContent = `Request from ${request.sender_username} `;
-                        requestDiv.appendChild(usernameSpan);
-
-                        if (request.status === "pending") {
-                            // Display the accept and decline buttons only when the status is pending
-                            const acceptBtn = document.createElement('button');
-                            acceptBtn.textContent = 'Accept';
-                            acceptBtn.addEventListener('click', () => {
-                                acceptFriendRequest(request.id, currentUserId, request.sender_id);
-                            });
-                            requestDiv.appendChild(acceptBtn);
-                    
-                            const rejectBtn = document.createElement('button');
-                            rejectBtn.textContent = 'Reject';
-                            rejectBtn.addEventListener('click', () => {
-                                rejectFriendRequest(request.id);
-                            });
-                            requestDiv.appendChild(rejectBtn);
-                        } else {
-                            // Display the status of the friend request when it's either accepted or declined
-                            const statusSpan = document.createElement('span');
-                            statusSpan.textContent = request.status;
-                            requestDiv.appendChild(statusSpan);
-                        }
-                    }
-                    requestsContainer.appendChild(requestDiv);
-                });
-            } else {
-                requestsContainer.innerHTML = 'No friend requests at the moment.';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching friend requests:', error);
-        });
-    }
-
-    function acceptFriendRequest(requestId, userId, contactId) {
-        // Accept request
-        fetch(`${BASE_URL}/friend-requests/${requestId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                status: 'accepted'
-            })
-        })
-        .catch(error => {
-            console.error('Error accepting friend request:', error);
-        });
-
-        // Add to contact
-        fetch(`${BASE_URL}/contacts`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                userId: userId,
-                contactId: contactId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message); 
-            loadFriendRequests();
-        })
-        .catch(error => {
-            console.error('Error accepting friend request:', error);
-        });
     }
     
-    function rejectFriendRequest(requestId) {
-        // Accept request
-        fetch(`${BASE_URL}/friend-requests/${requestId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                status: 'declined'
+    function logoutUser() {
+        fetchWithErrorHandler(`${BASE_URL}/auth/logout`, 'POST')
+            .then(data => {
+                alert(data.message);
+                redirectToLogin();
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            loadFriendRequests();
-        })
-        .catch(error => {
-            console.error('Error rejecting friend request:', error);
-        });
+            .catch(() => {
+                alert('Error during logout.');
+            });
     }
-    
-    logoutBtn.addEventListener('click', () => {
-        fetch(`${BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',  // ensures cookies are sent with the request
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error(`Server responded with a status of ${response.status}`);
-            }
-        })
-        .then(data => {
-            alert(data.message);
-            window.location.href = '/user-login/login.html';
-        })
-        .catch(error => {
-            console.error('Error during logout:', error);
-            alert('Error during logout.');
-        });
-    });
+}
 
-    function loadContacts() {
-        const contactsList = document.querySelector('.contact-list');
-        fetch(`${BASE_URL}/contacts/${userId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
+function loadContacts() {
+    const contactsList = document.querySelector('.combined-list');
+    fetchWithErrorHandler(`${BASE_URL}/contacts/${userId}`, 'GET')
         .then(contacts => {
-            contactsList.innerHTML = ''; // Clear existing contacts
+            contactsList.innerHTML = '';
             contacts.forEach(contact => {
                 const contactItem = document.createElement('li');
-                contactItem.textContent = contact.username;
+                
+                // Create a clickable span for each username
+                const usernameSpan = document.createElement('span');
+                usernameSpan.textContent = contact.contact_username;
+                usernameSpan.classList.add('clickable-username'); // Some CSS to indicate it's clickable
+                usernameSpan.addEventListener('click', () => loadChatHistory(contact.contact_user_id, contact.contact_username));
+                
+                contactItem.appendChild(usernameSpan);
                 contactsList.appendChild(contactItem);
             });
         })
-        .catch(error => {
-            console.error('Error fetching contacts:', error);
+        .catch(() => {
+            console.error('Error fetching contacts');
         });
-    }    
+}
 
-    // Function to send a message
-    function sendMessage() {
-        const chatHistory = document.getElementById("chatHistory");
-        const chatInput = document.getElementById("chatInput");
+function loadChatHistory(contactId, contactUsername) {
+    if (chatId) {
+        socket.emit('leave room', chatId);
+    }
 
-        if (chatInput.value.trim() !== "") {
-            const newMessage = document.createElement("div");
-            newMessage.className = "message sent";
-            newMessage.innerText = chatInput.value.trim();
-            chatHistory.appendChild(newMessage);
+    const chatHeader = document.querySelector('.chat header h2');
+    chatHeader.textContent = contactUsername; 
 
-            chatInput.value = "";
+    fetchWithErrorHandler(`${BASE_URL}/chats/history?userId=${userId}&contactId=${contactId}`, 'GET')
+        .then(data => {
+            chatId = data.chatId;
+            socket.emit('join room', chatId);
+            const chatHistoryDiv = document.getElementById('chat-history'); 
+            chatHistoryDiv.innerHTML = '';
+            if (data.messages.length !== 0) {
+                data.messages.forEach(message => {
+                    const messageItem = document.createElement('div');
+
+                    // Decide the class based on the message sender
+                    if (message.sender_id === userId) {
+                        messageItem.classList.add('message', 'sent');
+                    } else {
+                        messageItem.classList.add('message', 'received');
+                    }
+
+                    messageItem.textContent = message.content;
+                    chatHistoryDiv.appendChild(messageItem);
+                });
+            }
+        })
+        .catch(() => {
+            console.error('Error fetching chat history');
+        });
+}
+
+function loadFriendRequests() {
+    const requestsDiv = document.querySelector('.combined-list');
+    fetchWithErrorHandler(`${BASE_URL}/friend-requests/${userId}`, 'GET')
+        .then(requests => {
+            requestsDiv.innerHTML = '';
+            requests.forEach(request => {
+                const requestItem = document.createElement('li');
+                if (request.sender_id === userId) { // User is the sender
+                    requestItem.textContent = `Request to ${request.receiver_username} is ${request.status}`;
+                } else if (request.receiver_id === userId && request.status === 'pending') { // User is the receiver and request is pending
+                    requestItem.textContent = `Request from ${request.sender_username} `;
+
+                    // Create Accept button
+                    const acceptBtn = document.createElement('button');
+                    acceptBtn.textContent = 'Accept';
+                    acceptBtn.addEventListener('click', () => updateFriendRequest(request.id, 'accepted', request.sender_id));
+
+                    requestItem.appendChild(acceptBtn);
+
+                    // Create Reject button
+                    const rejectBtn = document.createElement('button');
+                    rejectBtn.textContent = 'Decline';
+                    rejectBtn.addEventListener('click', () => updateFriendRequest(request.id, 'declined'));
+
+                    requestItem.appendChild(rejectBtn);
+                } else { // User is the receiver and request is either accepted or declined
+                    requestItem.textContent = `Request from ${request.sender_username} ${request.status}`;
+                }
+                
+                requestsDiv.appendChild(requestItem);
+            });
+        })
+        .catch(() => {
+            console.error('Error fetching friend requests');
+        });
+}
+
+function updateFriendRequest(requestId, status, contactId) {
+    fetchWithErrorHandler(`${BASE_URL}/friend-requests/${requestId}`, 'PUT', {
+        status: status
+    })
+    .then(data => {
+        alert(data.message); // Notify the user of the result
+        loadFriendRequests(); // Refresh the list after updating
+
+        if (status === 'accepted') {
+            // Add to contacts and then create chat
+            return addContact(userId, contactId)
+                   .then(() => createChat(userId, contactId));
         }
-    }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
 
-    // Function to load chat for a selected contact
-    function loadChat(contactElement) {
-        const chatHeader = document.querySelector(".chat header h2");
-        chatHeader.textContent = contactElement.textContent;
-    }
-});
+function addContact(userId, contactId) {
+    return fetchWithErrorHandler(`${BASE_URL}/contacts`, 'POST', {
+        userId: userId,
+        contactId: contactId
+    });
+}
+
+function createChat(userId, contactId) {
+    return fetchWithErrorHandler(`${BASE_URL}/chats`, 'POST', {
+        userId: userId,
+        contactId: contactId
+    });
+}
+
+function sendMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const messageContent = chatInput.value.trim();
+
+    if (messageContent) {
+        // Send the message to the backend using fetchWithErrorHandler
+        const content = DOMPurify.sanitize(messageContent);
+
+        // Append message to the chat history (if needed) and clear input
+        chatInput.value = '';
+        // Optionally: reload chat history or append the message directly to the chat history div
+        // const chatHistoryDiv = document.getElementById('chat-history'); 
+        // const messageItem = document.createElement('div');
+        // messageItem.textContent = content;
+        // messageItem.classList.add('message', 'sent');
+        // chatHistoryDiv.appendChild(messageItem);
+
+        socket.emit('send message', {
+            chat_id: chatId,
+            sender_id: userId,
+            content: content
+        });
+    } 
+}
+

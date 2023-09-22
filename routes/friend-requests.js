@@ -22,6 +22,7 @@ router.get('/:id', async (req, res) => {
             JOIN users u1 ON fr.sender_id = u1.id
             JOIN users u2 ON fr.receiver_id = u2.id
             WHERE fr.receiver_id = ? OR fr.sender_id = ?
+            ORDER BY fr.timestamp DESC
         `, [userId, userId]);
         res.status(200).json(requests);
     } catch (error) {
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
         }
 
         // Check if the contact already exists in their contacts list
-        const [existingContacts] = await db.query('SELECT * FROM contacts WHERE user_id = ? AND contact_id = ?', [userId, contactId]);
+        const [existingContacts] = await db.query('SELECT * FROM contacts WHERE (user1_id = ? AND user2_id = ?) OR (user2_id = ? AND user1_id = ?)', [userId, contactId, userId, contactId]);
         
         if (existingContacts.length > 0) {
             return res.status(400).json({ message: "This user is already in your contacts." });
@@ -68,6 +69,7 @@ router.put('/:id', async (req, res) => {
     const { status } = req.body;
     const db = req.app.get('db');
 
+    console.log(status);
     // Check if the provided status is valid
     if (!['accepted', 'declined'].includes(status)) {
         return res.status(400).json({ message: "Invalid status. Status should be 'accepted' or 'declined'." });

@@ -22,10 +22,10 @@ router.get('/', async (req, res) => {
                 userId: existingData.id
             });
         } else {
-            return res.status(400).send({ exists: false });
+            return res.status(200).send({ exists: false });
         }
     } catch (error) {
-        return res.status(400).send(error);
+        return res.status(500).send(error);
     }
 });
 
