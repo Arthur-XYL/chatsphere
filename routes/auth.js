@@ -1,3 +1,4 @@
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const express = require('express');
@@ -7,7 +8,7 @@ const router = express.Router();
 router.get('/status', (req, res) => {
     const token = req.cookies.jwt;
     if (token) {
-        jwt.verify(token, 'secret', (err, decoded) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
             if (err) {
                 return res.json({ isAuthenticated: false });
             } else {
@@ -43,7 +44,7 @@ router.post('/login', async (req, res) => {
                     }
                 };
         
-                jwt.sign(payload, 'secret', { expiresIn: 86400 }, (err, token) => {
+                jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 86400 }, (err, token) => {
                     if (err) throw err;
         
                     // Setting JWT in HTTP-only cookie
@@ -80,7 +81,8 @@ router.post('/register', async (req, res) => {
         if (existingData) {
             return res.status(400).send({ message: "Username already exists." });
         } else {
-            const salt = await bcrypt.genSalt(10);
+            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const salt = await bcrypt.genSalt(saltRounds);
             const hashedPassword = await bcrypt.hash(password, salt);
 
             await db.query(

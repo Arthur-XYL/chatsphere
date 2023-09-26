@@ -12,6 +12,7 @@ socket.on('receive message', (data) => {
             messageItem.classList.add('message', 'received');
         }
         chatHistoryDiv.appendChild(messageItem);
+        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
     }
 });
 
@@ -20,6 +21,22 @@ let chatId;
 
 window.addEventListener('pageshow', checkAuthentication);
 
+// function fetchWithErrorHandler(url, method, body) {
+//     const options = {
+//         method: method,
+//         credentials: 'include',
+//         headers: {
+//             'Content-Type': 'application/json'
+//         }
+//     };
+//     if (body) options.body = JSON.stringify(body);
+
+//     return fetch(url, options)
+//         .then(response => {
+//             if (response.ok) return response.json();
+//             throw new Error('Network response was not ok');
+//         });
+// }
 function fetchWithErrorHandler(url, method, body) {
     const options = {
         method: method,
@@ -33,9 +50,10 @@ function fetchWithErrorHandler(url, method, body) {
     return fetch(url, options)
         .then(response => {
             if (response.ok) return response.json();
-            throw new Error('Network response was not ok');
+            return response.json().then(err => { throw err; }); // modified this line to throw the error message
         });
 }
+
 
 function checkAuthentication() {
     fetchWithErrorHandler(`${BASE_URL}/auth/status`, 'GET')
@@ -64,33 +82,29 @@ document.addEventListener("DOMContentLoaded", function() {
 function initializeApp() {
     const addContactBtn = document.getElementById("add-contact-btn");
     const logoutBtn = document.getElementById("logout-btn");
-    const modal = document.getElementById("addContactModal");
-    const searchBtn = modal.querySelector('#add-contact-modal-search');
-    const searchResult = modal.querySelector("#searchResult");
-    const submitBtn = modal.querySelector('#add-contact-modal-submit');
-    const cancelBtn = modal.querySelector('#add-contact-modal-cancel');
+
+    const requestModal = document.getElementById("addContactModal");
     const toggleListBtn = document.getElementById("toggle-list-btn");
     const sendMessageBtn = document.getElementById("send-message-btn");
     let searchedUserId;
 
-    addContactBtn.addEventListener("click", showModal);
-    searchBtn.addEventListener('click', searchUser);
-    submitBtn.addEventListener('click', submitFriendRequest);
-    cancelBtn.addEventListener('click', closeModal);
+    addContactBtn.addEventListener('click', showRequestModal);
     toggleListBtn.addEventListener("click", toggleList);
     logoutBtn.addEventListener('click', logoutUser);
     sendMessageBtn.addEventListener('click', sendMessage);
 
-    function showModal() {
-        modal.showModal();
+    function showRequestModal() {
+        requestModal.showModal();
+        const searchBtn = requestModal.querySelector('#add-contact-modal-search');
+        const searchResult = requestModal.querySelector("#searchResult");
+        const sendRequestBtn = requestModal.querySelector('#add-contact-modal-submit');
+        const cancelRequestBtn = requestModal.querySelector('#add-contact-modal-cancel');
+
+        searchBtn.addEventListener('click', searchUser);
+        sendRequestBtn.addEventListener('click', submitFriendRequest);
+        cancelRequestBtn.addEventListener('click', closeRequestModal);
     }
-    
-    function closeModal() {
-        searchResult.innerHTML = '';
-        searchedUserId = null;
-        modal.close();
-    }
-    
+
     function searchUser() {
         const userInput = document.getElementById("searchInput").value;
         if (!userInput) {
@@ -115,7 +129,7 @@ function initializeApp() {
                 searchedUserId = null;
             });
     }
-    
+
     function submitFriendRequest() {
         if (!searchedUserId) {
             searchResult.innerHTML = 'Please search a valid user before sending a request.';
@@ -129,11 +143,17 @@ function initializeApp() {
             .then(data => {
                 searchResult.innerHTML = data.message;
             })
-            .catch(() => {
-                searchResult.innerHTML = 'Error sending friend request. Please try again later.';
+            .catch(error => {
+                searchResult.innerHTML = error.message || 'Error sending friend request. Please try again later.'; // display the error message from the server or the default one
             });
-    }
+    }    
     
+    function closeRequestModal() {
+        searchResult.innerHTML = '';
+        searchedUserId = null;
+        requestModal.close();
+    }
+
     function toggleList() {
         const combinedListDiv = document.getElementById('combined-list-div');
         const listTitle = document.getElementById('list-title');
@@ -176,7 +196,6 @@ function loadContacts() {
                 usernameSpan.textContent = contact.contact_username;
                 usernameSpan.classList.add('clickable-username'); // Some CSS to indicate it's clickable
                 usernameSpan.addEventListener('click', () => loadChatHistory(contact.contact_user_id, contact.contact_username));
-                
                 contactItem.appendChild(usernameSpan);
                 contactsList.appendChild(contactItem);
             });
@@ -296,17 +315,8 @@ function sendMessage() {
     const messageContent = chatInput.value.trim();
 
     if (messageContent) {
-        // Send the message to the backend using fetchWithErrorHandler
         const content = DOMPurify.sanitize(messageContent);
-
-        // Append message to the chat history (if needed) and clear input
         chatInput.value = '';
-        // Optionally: reload chat history or append the message directly to the chat history div
-        // const chatHistoryDiv = document.getElementById('chat-history'); 
-        // const messageItem = document.createElement('div');
-        // messageItem.textContent = content;
-        // messageItem.classList.add('message', 'sent');
-        // chatHistoryDiv.appendChild(messageItem);
 
         socket.emit('send message', {
             chat_id: chatId,
